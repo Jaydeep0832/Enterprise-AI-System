@@ -1,0 +1,36 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# Coverage
+coverage/
+.coverage
+
+# Build
+dist/
+build/
+
+# Database
+*.db
+
+# Misc
+*.tmp
