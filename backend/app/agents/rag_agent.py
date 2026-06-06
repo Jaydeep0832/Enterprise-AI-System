@@ -7,4 +7,4 @@ class RAGAgent:
         self.rag = RAGService()
 
     def ask(self, question: str) -> str:
-        return self.rag.ask(question)
+        return self.rag.answer(question)

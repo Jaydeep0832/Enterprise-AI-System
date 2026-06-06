@@ -8,29 +8,23 @@ class RAGService:
         self.retriever = Retriever()
         self.llm = LLMService()
 
-    def ask(self, question: str):
+    def answer(self, question: str) -> str:
+        results = self.retriever.search(query=question, limit=5)
 
-        docs = self.retriever.search(
-            question,
-            limit=3
-        )
+        context = "\n\n".join(row.content for row in results)
 
-        context = "\n\n".join(
-            doc[1]
-            for doc in docs
-        )
+        prompt = f"""You are an Enterprise AI assistant.
 
-        prompt = f"""
-        Answer the question using
-        the provided context.
+Answer ONLY using the provided context.
+If the answer cannot be found in the context, respond with:
+"I could not find the answer in the uploaded documents."
 
-        Context:
-        {context}
+Context:
+{context}
 
-        Question:
-        {question}
-        """
+Question:
+{question}
 
-        return self.llm.generate(
-            prompt
-        )
+Answer:"""
+
+        return self.llm.generate(prompt)
