@@ -7,7 +7,7 @@ class ToolRegistry:
     def __init__(self):
         self.tools = {
             "calculator": CalculatorTool(),
-            "web_search": WebSearchTool()
+            "web_search": WebSearchTool(),
         }
 
     def get_tool(self, name: str):

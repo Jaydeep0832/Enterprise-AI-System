@@ -14,10 +14,5 @@ class RAGRequest(BaseModel):
 
 @router.post("/rag")
 async def rag(request: RAGRequest):
-    answer = agent.ask(
-        request.question
-    )
-
-    return {
-        "answer": answer
-    }
+    answer = agent.ask(request.question)
+    return {"answer": answer}

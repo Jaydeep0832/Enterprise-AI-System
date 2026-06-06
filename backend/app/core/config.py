@@ -11,18 +11,18 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "enterprise_ai"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
-    
+
     GEMINI_API_KEY: str = ""
     GROQ_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
-    OPENROUTER_API_KEY: str = ""    
-    
+    OPENROUTER_API_KEY: str = ""
+
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="ignore"
+        extra="ignore",
     )
 
 

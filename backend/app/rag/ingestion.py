@@ -10,29 +10,20 @@ class IngestionService:
         self.embedder = Embedder()
 
     def ingest(self, content: str):
-
-        embedding = self.embedder.embed(
-            content
-        )
+        embedding = self.embedder.embed(content)
 
         query = text("""
-            INSERT INTO documents
-            (content, embedding)
-            VALUES
-            (:content, :embedding)
+            INSERT INTO documents (content, embedding)
+            VALUES (:content, :embedding)
         """)
 
         with engine.begin() as conn:
-
-            conn.execute(
-                query,
-                {
-                    "content": content,
-                    "embedding": embedding
-                }
-            )
+            conn.execute(query, {
+                "content": content,
+                "embedding": embedding,
+            })
 
         return {
             "status": "stored",
-            "dimensions": len(embedding)
+            "dimensions": len(embedding),
         }

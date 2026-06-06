@@ -9,19 +9,7 @@ class BaseAgent:
         self.memory = memory
 
     def run(self, prompt: str) -> str:
-
-        self.memory.add(
-            "user",
-            prompt
-        )
-
-        response = self.llm.generate(
-            prompt
-        )
-
-        self.memory.add(
-            "assistant",
-            response
-        )
-
+        self.memory.add("user", prompt)
+        response = self.llm.generate(prompt)
+        self.memory.add("assistant", response)
         return response

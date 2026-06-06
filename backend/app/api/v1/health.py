@@ -29,5 +29,5 @@ async def health_check():
         "status": "healthy",
         "database": db_status,
         "redis": redis_status,
-        "service": "enterprise-ai-system"
+        "service": "enterprise-ai-system",
     }
