@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "./services/api";
 
 type Message = {
@@ -7,71 +7,61 @@ type Message = {
 };
 
 function App() {
-  const [query, setQuery] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const response = await api.get("/history");
+  const uploadFile = async () => {
+    if (!file) return;
 
-        setMessages(
-          response.data.messages || []
-        );
-      } catch (error) {
-        console.log(
-          "History load failed",
-          error
-        );
-      }
-    };
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploadStatus("Uploading...");
 
-    loadHistory();
-  }, []);
+    try {
+      const response = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setUploadStatus(
+        `Uploaded: ${response.data.filename} (${response.data.chunks} chunks)`
+      );
+    } catch (error) {
+      console.error(error);
+      setUploadStatus("Upload failed");
+    }
+  };
 
   const sendMessage = async () => {
-    if (!query.trim()) return;
+    if (!question.trim()) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "user",
-        content: query,
-      },
-    ]);
-
+    const userQuestion = question;
+    setMessages((prev) => [...prev, { role: "user", content: userQuestion }]);
+    setQuestion("");
     setLoading(true);
 
     try {
-      const response = await api.post(
-        "/chat",
-        {
-          query,
-        }
-      );
+      const response = await api.post("/chat", {
+        question: userQuestion,
+        session_id: sessionId,
+      });
 
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: response.data.answer,
-        },
+        { role: "assistant", content: response.data.answer },
       ]);
 
-      setQuery("");
+      // store the session id from backend so future messages stay in the same conversation
+      if (response.data.session_id) {
+        setSessionId(response.data.session_id);
+      }
     } catch (error: any) {
-      console.log(error);
-
+      console.error(error);
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content:
-            error?.message ||
-            "Error contacting backend",
-        },
+        { role: "assistant", content: "Error contacting backend" },
       ]);
     } finally {
       setLoading(false);
@@ -80,14 +70,32 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
-
+      <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-center">
-          Enterprise AI Assistant
+          Enterprise AI System
         </h1>
 
-        <div className="bg-white border rounded-lg p-4 h-[500px] overflow-y-auto mb-4">
+        {/* Upload Section */}
+        <div className="bg-white p-4 rounded-lg border mb-6">
+          <h2 className="text-xl font-semibold mb-3">Upload PDF</h2>
+          <div className="flex gap-3">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+            <button
+              onClick={uploadFile}
+              className="bg-green-600 text-white px-4 py-2 rounded"
+            >
+              Upload
+            </button>
+          </div>
+          {uploadStatus && <p className="mt-3">{uploadStatus}</p>}
+        </div>
 
+        {/* Chat Window */}
+        <div className="bg-white border rounded-lg p-4 h-[500px] overflow-y-auto mb-4">
           {messages.map((message, index) => (
             <div
               key={index}
@@ -110,44 +118,31 @@ function App() {
           ))}
 
           {loading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-200 p-3 rounded-lg">
-                AI is thinking...
-              </div>
-            </div>
+            <div className="bg-gray-200 p-3 rounded-lg">AI is thinking...</div>
           )}
-
         </div>
 
+        {/* Chat Input */}
         <div className="flex gap-2">
-
           <input
             className="border rounded-lg p-3 flex-1"
-            value={query}
-            onChange={(e) =>
-              setQuery(e.target.value)
-            }
-            placeholder="Ask something..."
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask questions about uploaded documents..."
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                sendMessage();
-              }
+              if (e.key === "Enter") sendMessage();
             }}
           />
-
           <button
             className="bg-blue-500 text-white px-6 rounded-lg"
             onClick={sendMessage}
           >
             Send
           </button>
-
         </div>
-
       </div>
     </div>
   );
 }
 
 export default App;
-

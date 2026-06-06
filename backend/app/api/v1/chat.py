@@ -1,30 +1,23 @@
+import uuid
+
 from fastapi import APIRouter
 
-from app.schemas.chat import (
-    ChatRequest,
-    ChatResponse
-)
-
+from app.schemas.chat import ChatRequest, ChatResponse
 from app.graph.langgraph_workflow import graph
-
 
 router = APIRouter()
 
 
-@router.post(
-    "/chat",
-    response_model=ChatResponse
-)
-async def chat(
-    request: ChatRequest
-):
+@router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    session_id = request.session_id or str(uuid.uuid4())
 
-    result = graph.invoke(
-        {
-            "query": request.query
-        }
-    )
+    result = graph.invoke({
+        "query": request.question,
+        "session_id": session_id,
+    })
 
     return ChatResponse(
-        answer=result["result"]
+        answer=result["result"],
+        session_id=session_id,
     )
