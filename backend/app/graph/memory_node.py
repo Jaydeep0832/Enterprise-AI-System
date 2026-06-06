@@ -1,12 +1,11 @@
-from app.memory.conversation_memory import ConversationMemory
-
-memory = ConversationMemory()
+from app.memory.redis_memory import RedisMemory
 
 
-def memory_node(state):
+def load_memory_node(state):
+    """Pull conversation history from Redis for the current session."""
+    session_id = state.get("session_id", "default")
 
-    history = memory.get_history()
+    memory = RedisMemory(session_id)
+    history = memory.get_context()
 
-    return {
-        "history": history
-    }
+    return {"history": history}

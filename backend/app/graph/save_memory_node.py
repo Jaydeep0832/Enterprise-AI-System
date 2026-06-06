@@ -1,16 +1,12 @@
-from app.memory.conversation_memory import ConversationMemory
-
-memory = ConversationMemory()
+from app.memory.redis_memory import RedisMemory
 
 
 def save_memory_node(state):
+    """Save the current Q&A pair to Redis for future context."""
+    session_id = state.get("session_id", "default")
 
-    memory.add_message(
-        f"Q: {state['query']}"
-    )
-
-    memory.add_message(
-        f"A: {state['result']}"
-    )
+    memory = RedisMemory(session_id)
+    memory.add("user", state["query"])
+    memory.add("assistant", state["result"])
 
     return state
