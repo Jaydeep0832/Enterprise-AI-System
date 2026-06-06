@@ -12,7 +12,7 @@ ENV/
 
 # Environment Variables
 .env
-.env.*
+!.env.example
 
 # IDEs
 .vscode/
@@ -20,6 +20,7 @@ ENV/
 
 # OS Files
 .DS_Store
+Thumbs.db
 
 # Logs
 *.log
@@ -56,6 +57,19 @@ dist/
 # Jupyter
 .ipynb_checkpoints/
 
-# Temporary Files
+# Temporary / generated files
 *.tmp
 tempCodeRunnerFile.py
+PROJECT_*.txt
+PROJECT_CONTEXT.md
+PROJECT_FRONTEND_PACKAGES.txt
+PROJECT_GIT_STATUS.txt
+
+# Uploads
+backend/uploads/
+
+# Zone identifier files (windows WSL artifact)
+*.pdf:Zone.Identifier
+
+# Sample files
+backend/sample.pdf
