@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+.venv/
+backend/venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+!.env.example
+
+# IDEs
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node.js
+node_modules/
+
+# Coverage
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+.pytest_cache/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Database
+*.db
+
+# Redis
+*.rdb
+*.aof
+*.pid
+
+# Type Checkers
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary / generated files
+*.tmp
+tempCodeRunnerFile.py
+_project_meta/
+
+# Uploads
+backend/uploads/
+uploads/
+
+# Zone identifier files (windows WSL artifact)
+*.pdf:Zone.Identifier
+
+# Sample files
+backend/sample.pdf
