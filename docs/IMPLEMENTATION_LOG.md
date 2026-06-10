@@ -244,4 +244,103 @@ went through every file and cleaned up formatting:
 
 ---
 
-*last updated: june 6, 2026*
+*last updated: june 10, 2026*
+
+---
+
+## phase 6 completion (june 10, 2026)
+
+### 6.7 — complete document upload pipeline
+
+upgraded the entire ingestion stack:
+
+**new capabilities:**
+- multi-format support: PDF, TXT, MD, DOCX (uses python-docx)
+- metadata stored per chunk: filename, file_type, chunk_index, total_chunks, uploaded_at
+- document management API:
+  - `GET /documents` — list all docs grouped by filename with chunk count
+  - `GET /documents/{id}` — retrieve a specific chunk by DB id
+  - `DELETE /documents/{filename}` — delete all chunks for a file (also removes from disk)
+- unsupported file types return 400 with a clear error message
+
+**what i learned:** storing metadata alongside embeddings is critical for document management. without filename + chunk_index, you can't list, filter, or delete documents.
+
+### 6.8 — requirements.txt regenerated
+
+ran `pip freeze > requirements.txt` — went from 15 packages to 125.
+the old file was generated manually at the start. never do that — always freeze from the actual venv.
+
+### 6.9 — dead code removed
+
+deleted 3 files that were never imported:
+- `graph/orchestrator.py` — replaced by LangGraph
+- `graph/state.py` — TypedDict defined inline in langgraph_workflow.py
+- `rag/ingestion.py` — duplicate of document_ingestion.py but using raw SQL
+
+### 6.10 — pytest test suite (41 total tests)
+
+converted 27 manual test scripts into a proper pytest suite:
+
+| file | tests | what it covers |
+|---|---|---|
+| `test_calculator.py` | 13 | arithmetic, edge cases, security exploits |
+| `test_health.py` | 6 | endpoint, db connection, redis connection |
+| `test_memory.py` | 5 | add/retrieve, session isolation, clear, API |
+| `test_upload.py` | 9 | PDF/TXT/MD upload, type rejection, list, delete |
+| `test_chat.py` | 8 | chat routing, LLM calls, session, RAG, research |
+
+run from backend/ dir: `python -m pytest ../tests/ -v`
+
+**lesson:** tests that import the FastAPI app must be run from the directory that contains `.env`. pydantic-settings finds `.env` relative to the working directory, not the script location.
+
+### 6.11 — alembic migrations
+
+set up alembic properly:
+- `alembic init alembic` in backend/
+- configured `env.py` to import our settings (DB URL from .env)
+- pointed `target_metadata` at `Document.Base.metadata` for autogenerate
+- generated initial migration: added 5 metadata columns to documents table
+- fixed the migration to add columns as nullable → backfill defaults → set NOT NULL (handles existing rows safely)
+- `alembic upgrade head` — all migrations applied
+
+### 6.12 — dockerfile + docker-compose
+
+- `backend/Dockerfile` — Python 3.11-slim, installs all requirements, runs uvicorn
+- `frontend/Dockerfile` — multi-stage: Node 20 builds React, nginx serves the dist
+- `docker-compose.yml` — 4 services:
+  - `postgres` (pgvector/pgvector:pg16) with health check
+  - `redis` (redis:7-alpine) with health check
+  - `backend` — depends_on postgres+redis health checks
+  - `frontend` — nginx with SPA routing + API proxy to backend
+
+### other fixes in this session
+
+- `history.py` — was returning shared in-memory singleton. now uses `RedisMemory(session_id)` for per-session history. added DELETE endpoint.
+- `base_agent.py` — removed the `self.memory = memory` singleton. agents are now stateless — memory is managed by the LangGraph nodes only.
+- `tool_agent.py` — removed singleton memory dependency, uses instance-level `_last_result` for chaining
+- `langgraph_workflow.py` — expanded router keywords (added: calculate, compute, pdf, file, according to)
+
+### test results
+
+```
+33 passed (health + memory + upload + calculator) — 0 failures
+ 8 passed (chat integration with real LLM calls) — 0 failures
+─────────────────────────────────────────────────────
+41 total tests passing
+```
+
+## what's left (phase 7)
+
+| milestone | what |
+|---|---|
+| 7.1 | Skills Framework (descriptors, registry, dynamic loading) |
+| 7.2 | Real web search tool (Tavily or Brave API) |
+| 7.3 | File read/summarize tools |
+| 7.4 | Agent Executor with iterative tool-use loop |
+| 7.5 | Agent Planner with task decomposition |
+| 7.6 | Integrate planner + executor in LangGraph |
+| 7.7 | Safety guardrails (max iterations, budget) |
+| 7.8 | Agent execution tracing |
+| 7.9 | Brainstorming Agent |
+| 7.10 | Frontend: agent status display |
+
