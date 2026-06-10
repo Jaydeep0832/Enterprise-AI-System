@@ -1,10 +1,17 @@
-from typing import TypedDict, Optional
+"""
+LangGraph workflow — main agent orchestration graph.
 
-from langgraph.graph import StateGraph, END
+Flow:
+  load_memory → router → [tool | rag | research] → save_memory → END
+"""
 
-from app.agents.tool_agent import ToolAgent
+from typing import Optional, TypedDict
+
+from langgraph.graph import END, StateGraph
+
 from app.agents.rag_agent import RAGAgent
 from app.agents.research_agent import ResearchAgent
+from app.agents.tool_agent import ToolAgent
 from app.graph.memory_node import load_memory_node
 from app.graph.save_memory_node import save_memory_node
 
@@ -26,16 +33,19 @@ MATH_KEYWORDS = [
     "+", "-", "*", "/",
     "add", "subtract", "multiply", "divide",
     "previous result", "last result", "previous answer",
+    "calculate", "compute",
 ]
 
 RAG_KEYWORDS = [
     "vector database", "rag", "enterprise ai",
     "langgraph", "pgvector", "redis memory",
-    "document", "uploaded",
+    "document", "uploaded", "pdf", "file",
+    "what does the document", "according to",
 ]
 
 
 def router_node(state: GraphState):
+    """Decide which agent handles this query."""
     query = state["query"].lower()
 
     if any(kw in query for kw in MATH_KEYWORDS):
@@ -62,7 +72,7 @@ def research_node(state: GraphState):
     return {"result": result}
 
 
-def route_decision(state):
+def route_decision(state: GraphState) -> str:
     return state["route"]
 
 
