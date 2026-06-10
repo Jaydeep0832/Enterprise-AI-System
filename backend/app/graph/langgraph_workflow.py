@@ -33,7 +33,8 @@ MATH_KEYWORDS = [
     "+", "-", "*", "/",
     "add", "subtract", "multiply", "divide",
     "previous result", "last result", "previous answer",
-    "calculate", "compute",
+    "calculate", "compute", "times", "plus", "minus",
+    "sum of", "product of", "divided by",
 ]
 
 RAG_KEYWORDS = [
@@ -41,6 +42,11 @@ RAG_KEYWORDS = [
     "langgraph", "pgvector", "redis memory",
     "document", "uploaded", "pdf", "file",
     "what does the document", "according to",
+    "summarize", "summary", "overview",
+    "main sections", "sections in", "key points",
+    "what is this document", "what does it say",
+    "list all", "list the sections",
+    "mention", "mentioned in",
 ]
 
 

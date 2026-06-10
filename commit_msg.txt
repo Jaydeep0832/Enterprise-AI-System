@@ -1,0 +1,19 @@
+fix: 3 bugs from manual testing
+
+Bug 1 - Calculator natural language parsing
+- What is 50 * 4? now returns 200 (not syntax error)
+- multiply 6 by 7, add 25 and 75, subtract 3 from 10, divide 100 by 4 all work
+- ToolAgent extracts math from sentences before passing to calculator
+
+Bug 2 - RAG summarization
+- Summarize the uploaded PDF now works
+- Uses 12 chunks for summaries, 5 for Q&A
+- Better prompt for summary vs Q&A requests
+- Labels chunks with source filename
+
+Bug 3 - DB contamination
+- Deleted 441 test chunks (legacy_document, test_doc.txt, test_readme.md, test_upload.pdf)
+- Only real CoSSHI PDF remains (276 chunks)
+
+Router keywords expanded (summarize, overview, multiply, times, plus)
+9 new test_tool_agent.py tests all passing
