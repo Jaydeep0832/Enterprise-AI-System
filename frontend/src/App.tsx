@@ -1,61 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "./services/api";
-
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-};
+import Sidebar from "./components/Sidebar";
+import ChatWindow from "./components/ChatWindow";
+import type { Message } from "./components/ChatWindow";
+import ChatInput from "./components/ChatInput";
+import { Sparkles } from "lucide-react";
 
 function App() {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadStatus, setUploadStatus] = useState("");
-  const [question, setQuestion] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [sessions, setSessions] = useState<string[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const uploadFile = async () => {
-    if (!file) return;
+  // Load sessions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("enterprise_ai_sessions");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSessions(parsed);
+        if (parsed.length > 0) {
+          handleSelectSession(parsed[0]);
+        }
+      } catch (e) {
+        console.error("Failed to parse sessions", e);
+      }
+    }
+  }, []);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    setUploadStatus("Uploading...");
+  // Save sessions to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("enterprise_ai_sessions", JSON.stringify(sessions));
+  }, [sessions]);
 
+  const handleSelectSession = async (id: string) => {
+    setCurrentSessionId(id);
+    setLoading(true);
     try {
-      const response = await api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setUploadStatus(
-        `Uploaded: ${response.data.filename} (${response.data.chunks} chunks)`
-      );
-    } catch (error) {
-      console.error(error);
-      setUploadStatus("Upload failed");
+      const res = await api.get(`/history/${id}`);
+      setMessages(res.data.messages || []);
+    } catch (e) {
+      console.error(e);
+      setMessages([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const sendMessage = async () => {
-    if (!question.trim()) return;
+  const handleNewSession = () => {
+    setCurrentSessionId(null);
+    setMessages([]);
+  };
 
-    const userQuestion = question;
-    setMessages((prev) => [...prev, { role: "user", content: userQuestion }]);
-    setQuestion("");
+  const sendMessage = async (question: string) => {
+    const userMsg: Message = { role: "user", content: question };
+    setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
     try {
       const response = await api.post("/chat", {
-        question: userQuestion,
-        session_id: sessionId,
+        question,
+        session_id: currentSessionId,
       });
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: response.data.answer },
-      ]);
+      const assistantMsg: Message = { 
+        role: "assistant", 
+        content: response.data.answer,
+        sources: response.data.sources || []
+      };
+      
+      setMessages((prev) => [...prev, assistantMsg]);
 
-      // store the session id from backend so future messages stay in the same conversation
-      if (response.data.session_id) {
-        setSessionId(response.data.session_id);
+      if (response.data.session_id && response.data.session_id !== currentSessionId) {
+        const newId = response.data.session_id;
+        setCurrentSessionId(newId);
+        setSessions((prev) => {
+          if (!prev.includes(newId)) {
+            return [newId, ...prev];
+          }
+          return prev;
+        });
       }
     } catch (error: any) {
       console.error(error);
@@ -69,76 +93,46 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Enterprise AI System
-        </h1>
-
-        {/* Upload Section */}
-        <div className="bg-white p-4 rounded-lg border mb-6">
-          <h2 className="text-xl font-semibold mb-3">Upload PDF</h2>
-          <div className="flex gap-3">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-            <button
-              onClick={uploadFile}
-              className="bg-green-600 text-white px-4 py-2 rounded"
-            >
-              Upload
-            </button>
+    <div className="flex h-screen bg-slate-900 text-slate-200 overflow-hidden font-sans">
+      <Sidebar 
+        currentSessionId={currentSessionId}
+        onSelectSession={handleSelectSession}
+        onNewSession={handleNewSession}
+        sessions={sessions}
+      />
+      
+      <div className="flex-1 flex flex-col relative">
+        {/* Header */}
+        <header className="h-16 border-b border-slate-800 flex items-center px-6 justify-between shrink-0 glass-panel z-10">
+          <div className="flex items-center gap-2 text-emerald-400">
+            <Sparkles size={20} />
+            <h1 className="font-semibold tracking-wide">Enterprise AI</h1>
           </div>
-          {uploadStatus && <p className="mt-3">{uploadStatus}</p>}
-        </div>
+          <div className="text-xs font-medium bg-slate-800 px-3 py-1 rounded-full text-slate-400">
+            {currentSessionId ? `Session: ${currentSessionId.split("-")[0]}` : 'New Conversation'}
+          </div>
+        </header>
 
-        {/* Chat Window */}
-        <div className="bg-white border rounded-lg p-4 h-[500px] overflow-y-auto mb-4">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={
-                message.role === "user"
-                  ? "flex justify-end mb-3"
-                  : "flex justify-start mb-3"
-              }
-            >
-              <div
-                className={
-                  message.role === "user"
-                    ? "bg-blue-500 text-white p-3 rounded-lg max-w-[70%]"
-                    : "bg-gray-200 text-black p-3 rounded-lg max-w-[70%]"
-                }
-              >
-                {message.content}
-              </div>
+        {/* Chat Area */}
+        <div className="flex-1 overflow-hidden relative flex flex-col p-6">
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/50 to-slate-900 pointer-events-none -z-10" />
+          
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center opacity-50">
+              <Sparkles size={48} className="mb-4 text-slate-600" />
+              <h2 className="text-xl font-medium text-slate-400">How can I assist you today?</h2>
+              <p className="text-slate-500 mt-2 max-w-md text-center text-sm">Upload documents in the sidebar or ask a question to begin a new conversation.</p>
             </div>
-          ))}
-
-          {loading && (
-            <div className="bg-gray-200 p-3 rounded-lg">AI is thinking...</div>
+          ) : (
+            <ChatWindow messages={messages} loading={loading} />
           )}
-        </div>
 
-        {/* Chat Input */}
-        <div className="flex gap-2">
-          <input
-            className="border rounded-lg p-3 flex-1"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask questions about uploaded documents..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-          />
-          <button
-            className="bg-blue-500 text-white px-6 rounded-lg"
-            onClick={sendMessage}
-          >
-            Send
-          </button>
+          <div className="shrink-0 max-w-4xl mx-auto w-full pt-4">
+            <ChatInput onSendMessage={sendMessage} loading={loading} />
+            <div className="text-center mt-2 text-[10px] text-slate-500">
+              AI can make mistakes. Consider verifying critical information.
+            </div>
+          </div>
         </div>
       </div>
     </div>

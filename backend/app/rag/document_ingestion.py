@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.db.session import SessionLocal
 from app.models.document import Document
@@ -77,6 +78,7 @@ class DocumentIngestion:
                 doc = Document(
                     content=chunk,
                     embedding=embedding,
+                    search_vector=func.to_tsvector('english', chunk),
                     filename=filename,
                     file_type=file_type,
                     chunk_index=idx,

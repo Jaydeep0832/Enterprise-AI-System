@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
+    LANGCHAIN_TRACING_V2: str = "true"
+    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_PROJECT: str = "Enterprise AI System"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

@@ -18,3 +18,13 @@ class RedisMemory:
 
     def clear(self):
         redis_client.delete(self.session_id)
+        redis_client.delete(f"episodic:{self.session_id}")
+
+    # Episodic Memory extensions
+    def save_episode(self, task: str, result: str):
+        episode = {"task": task, "result": result}
+        redis_client.rpush(f"episodic:{self.session_id}", json.dumps(episode))
+
+    def get_episodes(self):
+        items = redis_client.lrange(f"episodic:{self.session_id}", 0, -1)
+        return [json.loads(item) for item in items]

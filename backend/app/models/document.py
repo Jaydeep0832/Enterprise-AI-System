@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Integer, Text, String, DateTime, func
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 
@@ -15,6 +16,9 @@ class Document(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list] = mapped_column(Vector(384))
+    
+    # Hybrid search vector
+    search_vector = mapped_column(TSVECTOR)
 
     # metadata
     filename: Mapped[str] = mapped_column(String(512), nullable=False, default="unknown")

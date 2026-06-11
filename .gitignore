@@ -60,13 +60,11 @@ dist/
 # Temporary / generated files
 *.tmp
 tempCodeRunnerFile.py
-PROJECT_*.txt
-PROJECT_CONTEXT.md
-PROJECT_FRONTEND_PACKAGES.txt
-PROJECT_GIT_STATUS.txt
+_project_meta/
 
 # Uploads
 backend/uploads/
+uploads/
 
 # Zone identifier files (windows WSL artifact)
 *.pdf:Zone.Identifier

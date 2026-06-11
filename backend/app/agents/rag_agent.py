@@ -6,5 +6,5 @@ class RAGAgent:
     def __init__(self):
         self.rag = RAGService()
 
-    def ask(self, question: str) -> str:
+    def ask(self, question: str) -> dict:
         return self.rag.answer(question)

@@ -20,4 +20,5 @@ async def chat(request: ChatRequest):
     return ChatResponse(
         answer=result["result"],
         session_id=session_id,
+        sources=result.get("sources", [])
     )

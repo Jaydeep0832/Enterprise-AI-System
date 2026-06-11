@@ -23,7 +23,7 @@ class RAGService:
         self.retriever = Retriever()
         self.llm = LLMService()
 
-    def answer(self, question: str) -> str:
+    def answer(self, question: str) -> dict:
         question_lower = question.lower()
 
         # use more chunks for summarization/overview requests
@@ -33,26 +33,30 @@ class RAGService:
         results = self.retriever.search(query=question, limit=limit)
 
         if not results:
-            return (
-                "No documents have been uploaded yet. "
-                "Please upload a PDF, TXT, or DOCX file first using the Upload section."
-            )
+            return {
+                "answer": "No documents have been uploaded yet. Please upload a PDF, TXT, or DOCX file first using the Upload section.",
+                "sources": []
+            }
 
         # build context — label each chunk with its source
         context_parts = []
         seen_filenames = set()
+        source_metadata = []
+        
         for i, row in enumerate(results, 1):
             fname = getattr(row, "filename", "document")
+            c_index = getattr(row, "chunk_index", 0)
             seen_filenames.add(fname)
             context_parts.append(f"[Chunk {i} from '{fname}']:\n{row.content}")
+            source_metadata.append({"filename": fname, "chunk_index": c_index, "content": row.content})
 
         context = "\n\n---\n\n".join(context_parts)
-        sources = ", ".join(seen_filenames)
+        sources_str = ", ".join(seen_filenames)
 
         if is_summary:
             prompt = f"""You are an Enterprise AI assistant tasked with summarizing documents.
 
-You have been given {len(results)} text chunks from the document(s): {sources}
+You have been given {len(results)} text chunks from the document(s): {sources_str}
 
 Your task: {question}
 
@@ -73,7 +77,7 @@ Use the provided document context to answer the question.
 If the information is not clearly in the context, say what you DO know from the context
 and note that the full answer may require reading more of the document.
 
-Source document(s): {sources}
+Source document(s): {sources_str}
 
 Context:
 {context}
@@ -82,4 +86,7 @@ Question: {question}
 
 Answer:"""
 
-        return self.llm.generate(prompt)
+        return {
+            "answer": self.llm.generate(prompt),
+            "sources": source_metadata
+        }

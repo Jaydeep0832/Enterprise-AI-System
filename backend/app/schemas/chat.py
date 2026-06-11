@@ -10,3 +10,4 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     session_id: str
+    sources: Optional[list] = []
