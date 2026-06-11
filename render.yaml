@@ -1,0 +1,51 @@
+services:
+  # PostgreSQL Database (pgvector support is natively available in Render Postgres 16)
+  - type: psql
+    name: enterprise-ai-db
+    plan: free
+    postgresMajorVersion: 16
+    
+  # Redis Instance
+  - type: redis
+    name: enterprise-ai-redis
+    plan: free
+
+  # FastAPI Backend
+  - type: web
+    name: enterprise-ai-backend
+    env: docker
+    region: oregon
+    plan: free
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: enterprise-ai-db
+          property: host
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: enterprise-ai-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: enterprise-ai-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: enterprise-ai-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: enterprise-ai-redis
+          property: host
+
+  # React Frontend
+  - type: web
+    name: enterprise-ai-frontend
+    env: docker
+    region: oregon
+    plan: free
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
