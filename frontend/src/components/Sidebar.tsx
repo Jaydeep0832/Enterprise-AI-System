@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { UploadCloud, MessageSquare, Plus, File, Trash2 } from "lucide-react";
+import {
+  UploadCloud, MessageSquare, Plus, File, Trash2,
+  BarChart3, Network, Home, FlaskConical,
+} from "lucide-react";
 import api from "../services/api";
 
 type Document = {
@@ -12,9 +15,14 @@ type SidebarProps = {
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
   sessions: string[];
+  currentPage: string;
+  onNavigate: (path: string) => void;
 };
 
-export default function Sidebar({ currentSessionId, onSelectSession, onNewSession, sessions }: SidebarProps) {
+export default function Sidebar({
+  currentSessionId, onSelectSession, onNewSession, sessions,
+  currentPage, onNavigate,
+}: SidebarProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -62,6 +70,13 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewSessio
     }
   };
 
+  const navItems = [
+    { path: "/", icon: <Home size={16} />, label: "Chat" },
+    { path: "/dashboard", icon: <BarChart3 size={16} />, label: "Dashboard" },
+    { path: "/evaluation", icon: <FlaskConical size={16} />, label: "Evaluation" },
+    { path: "/knowledge-graph", icon: <Network size={16} />, label: "Knowledge Graph" },
+  ];
+
   return (
     <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full text-slate-300">
       <div className="p-4">
@@ -72,6 +87,29 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewSessio
           <Plus size={18} />
           New Chat
         </button>
+      </div>
+
+      {/* Navigation */}
+      <div className="px-3 mb-4">
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-1">
+          Navigation
+        </h3>
+        <div className="space-y-0.5">
+          {navItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => onNavigate(item.path)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left transition-all ${
+                currentPage === item.path
+                  ? "bg-blue-600/15 text-blue-400 border border-blue-500/20"
+                  : "hover:bg-slate-800/50 hover:text-slate-200 text-slate-400"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">

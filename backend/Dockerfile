@@ -12,10 +12,10 @@ RUN apt-clean || true && \
 
 # install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # copy application source
-COPY . .
+COPY backend/ .
 
 # create uploads directory
 RUN mkdir -p uploads

@@ -6,10 +6,10 @@ class ProviderManager:
     def __init__(self):
 
         self.providers = [
-            LLMProvider.OPENROUTER,
+            LLMProvider.OPENAI,
             LLMProvider.GROQ,
             LLMProvider.GEMINI,
-            LLMProvider.OPENAI
+            LLMProvider.OPENROUTER
         ]
 
     def get_providers(self):

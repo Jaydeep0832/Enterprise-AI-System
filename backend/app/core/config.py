@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     LANGCHAIN_API_KEY: str = ""
     LANGCHAIN_PROJECT: str = "Enterprise AI System"
 
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "enterprise-ai-secret-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
+
+    # CORS
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

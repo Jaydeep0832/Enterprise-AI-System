@@ -36,8 +36,8 @@ services:
   # ── Backend (FastAPI) ────────────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: enterprise_ai_backend
     env_file:
       - ./backend/.env
