@@ -33,7 +33,7 @@ class LLMService:
 
     def __init__(self):
         self.gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
+        self.groq_client = Groq(api_key=settings.GROQ_API_KEY, max_retries=0)
 
         # Initialize OpenAI clients
         self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -51,7 +51,7 @@ class LLMService:
     def generate(self, prompt: str) -> str:
         """Try each provider in order until one succeeds."""
 
-        for provider in ["openai", "groq", "gemini", "openrouter"]:
+        for provider in ["groq", "gemini", "openrouter", "openai"]:
             start_time = time.perf_counter()
             model = MODEL_MAP.get(provider, "unknown")
             try:

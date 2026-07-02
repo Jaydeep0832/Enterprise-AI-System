@@ -52,6 +52,8 @@ class KnowledgeGraphStore:
         finally:
             db.close()
 
+    # ── Single-item methods (kept for backward compatibility) ─────────────────
+
     def add_entity(self, name: str, entity_type: str, description: str = "", doc_source: str = ""):
         """Add an entity node to the graph and database."""
         # Add to NetworkX
@@ -91,6 +93,94 @@ class KnowledgeGraphStore:
                 db.commit()
         finally:
             db.close()
+
+    # ── Batch methods (single transaction per chunk) ─────────────────────────
+
+    def add_entities_batch(self, entities: List[Dict]):
+        """
+        Add multiple entity nodes in a single database transaction.
+        Each entity dict: {name, entity_type, description?, doc_source?}
+        """
+        if not entities:
+            return
+
+        # Add all to NetworkX first (fast, in-memory)
+        for e in entities:
+            self.graph.add_node(
+                e["name"],
+                entity_type=e.get("entity_type", "CONCEPT"),
+                description=e.get("description", ""),
+                doc_source=e.get("doc_source", ""),
+            )
+
+        # Batch persist to PostgreSQL — single transaction
+        db = SessionLocal()
+        try:
+            # Fetch all existing names in one query
+            names = [e["name"] for e in entities]
+            existing = db.query(KGNode.name).filter(KGNode.name.in_(names)).all()
+            existing_names = {row[0] for row in existing}
+
+            # Insert only new entities
+            new_entities = [
+                KGNode(
+                    name=e["name"],
+                    entity_type=e.get("entity_type", "CONCEPT"),
+                    description=e.get("description", ""),
+                    doc_source=e.get("doc_source", ""),
+                )
+                for e in entities
+                if e["name"] not in existing_names
+            ]
+
+            if new_entities:
+                db.add_all(new_entities)
+                db.commit()
+        finally:
+            db.close()
+
+    def add_relationships_batch(self, relationships: List[Dict]):
+        """
+        Add multiple relationship edges in a single database transaction.
+        Each relationship dict: {source, target, relation, doc_source?}
+        """
+        if not relationships:
+            return
+
+        # Add all to NetworkX first (fast, in-memory)
+        for r in relationships:
+            self.graph.add_edge(
+                r["source"], r["target"],
+                relation=r["relation"],
+                doc_source=r.get("doc_source", ""),
+            )
+
+        # Batch persist to PostgreSQL — single transaction
+        db = SessionLocal()
+        try:
+            # Build lookup keys for existing check
+            new_edges = []
+            for r in relationships:
+                exists = db.query(KGEdge.id).filter(
+                    KGEdge.source_name == r["source"],
+                    KGEdge.target_name == r["target"],
+                    KGEdge.relation == r["relation"],
+                ).first()
+                if not exists:
+                    new_edges.append(KGEdge(
+                        source_name=r["source"],
+                        target_name=r["target"],
+                        relation=r["relation"],
+                        doc_source=r.get("doc_source", ""),
+                    ))
+
+            if new_edges:
+                db.add_all(new_edges)
+                db.commit()
+        finally:
+            db.close()
+
+    # ── Query methods ────────────────────────────────────────────────────────
 
     def query_neighbors(self, entity_name: str, depth: int = 1) -> Dict:
         """Get all entities connected to the given entity within N hops."""
@@ -161,6 +251,7 @@ class KnowledgeGraphStore:
                 "name": name,
                 "type": data.get("entity_type", "unknown"),
                 "description": data.get("description", ""),
+                "doc_source": data.get("doc_source", ""),
             })
 
         edges = []

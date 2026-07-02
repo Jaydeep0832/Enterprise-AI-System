@@ -22,6 +22,7 @@ from app.knowledge_graph.graph_rag import GraphRAGService
 from app.graph.memory_node import load_memory_node
 from app.graph.save_memory_node import save_memory_node
 from app.evaluation.agent_evaluator import record_agent_execution
+from app.services.llm_service import LLMService
 
 
 class GraphState(TypedDict):
@@ -75,6 +76,12 @@ GRAPH_RAG_KEYWORDS = [
     "related to", "graph", "entities", "relationships",
 ]
 
+RESEARCH_KEYWORDS = [
+    "search the web", "look up", "find online", "latest news",
+    "recent developments", "current", "trending", "web search",
+    "news about", "updates on", "search for",
+]
+
 
 def _trace_node(state: GraphState, node_name: str, duration_ms: float, success: bool):
     """Record a node execution in the trace."""
@@ -106,8 +113,11 @@ def router_node(state: GraphState):
         route = "tool"
     elif any(kw in query for kw in RAG_KEYWORDS):
         route = "rag"
-    else:
+    elif any(kw in query for kw in RESEARCH_KEYWORDS):
         route = "research"
+    else:
+        # Default: direct LLM answer (fast path for simple questions)
+        route = "general"
 
     duration = (time.perf_counter() - start) * 1000
     trace = _trace_node(state, "router", duration, True)
@@ -270,6 +280,49 @@ def graph_rag_node(state: GraphState):
         return {"result": f"GraphRAG error: {e}", "execution_trace": trace}
 
 
+def general_node(state: GraphState):
+    """Fast-path: direct LLM answer for simple questions (no tools, no search)."""
+    start = time.perf_counter()
+    try:
+        llm = LLMService()
+        history = state.get("history", [])
+
+        # Build context-aware prompt
+        context = ""
+        if history:
+            recent = history[-6:]  # last 3 exchanges
+            context = "Previous conversation:\n" + "\n".join(
+                f"{m['role']}: {m['content']}" for m in recent
+            ) + "\n\n"
+
+        prompt = f"""{context}Answer the following question directly and concisely.
+
+Question: {state['query']}
+
+Answer:"""
+
+        result = llm.generate(prompt)
+        duration = (time.perf_counter() - start) * 1000
+        record_agent_execution(
+            trace_id=state.get("trace_id", ""),
+            route="general", query=state["query"],
+            execution_time_ms=duration, success=True,
+            result_length=len(result), session_id=state.get("session_id"),
+        )
+        trace = _trace_node(state, "general", duration, True)
+        return {"result": result, "execution_trace": trace}
+    except Exception as e:
+        duration = (time.perf_counter() - start) * 1000
+        record_agent_execution(
+            trace_id=state.get("trace_id", ""),
+            route="general", query=state["query"],
+            execution_time_ms=duration, success=False,
+            session_id=state.get("session_id"),
+        )
+        trace = _trace_node(state, "general", duration, False)
+        return {"result": f"Error: {e}", "execution_trace": trace}
+
+
 def route_decision(state: GraphState) -> str:
     return state["route"]
 
@@ -285,6 +338,7 @@ builder.add_node("research", research_node)
 builder.add_node("supervisor", supervisor_node)
 builder.add_node("brainstorm", brainstorm_node)
 builder.add_node("graph_rag", graph_rag_node)
+builder.add_node("general", general_node)
 builder.add_node("save_memory", save_memory_node)
 
 builder.set_entry_point("load_memory")
@@ -300,6 +354,7 @@ builder.add_conditional_edges(
         "supervisor": "supervisor",
         "brainstorm": "brainstorm",
         "graph_rag": "graph_rag",
+        "general": "general",
     },
 )
 
@@ -309,6 +364,7 @@ builder.add_edge("research", "save_memory")
 builder.add_edge("supervisor", "save_memory")
 builder.add_edge("brainstorm", "save_memory")
 builder.add_edge("graph_rag", "save_memory")
+builder.add_edge("general", "save_memory")
 builder.add_edge("save_memory", END)
 
 graph = builder.compile()

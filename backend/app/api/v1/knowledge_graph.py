@@ -47,24 +47,32 @@ async def build_knowledge_graph():
     for row in rows:
         result = extract_entities_from_chunk(row.content, source_filename=row.filename)
 
+        # Collect entities for batch insert
+        entities_batch = []
         for entity in result.get("entities", []):
-            kg.add_entity(
-                name=entity["name"],
-                entity_type=entity.get("type", "CONCEPT"),
-                description=entity.get("description", ""),
-                doc_source=entity.get("doc_source", row.filename),
-            )
-            total_entities += 1
-
+            entities_batch.append({
+                "name": entity["name"],
+                "entity_type": entity.get("type", "CONCEPT"),
+                "description": entity.get("description", ""),
+                "doc_source": entity.get("doc_source", row.filename),
+            })
+        
+        # Collect relationships for batch insert
+        relationships_batch = []
         for rel in result.get("relationships", []):
-            kg.add_relationship(
-                source=rel["source"],
-                target=rel["target"],
-                relation=rel["relation"],
-                doc_source=rel.get("doc_source", row.filename),
-            )
-            total_relationships += 1
+            relationships_batch.append({
+                "source": rel["source"],
+                "target": rel["target"],
+                "relation": rel["relation"],
+                "doc_source": rel.get("doc_source", row.filename),
+            })
 
+        # Batch insert — single transaction per chunk
+        kg.add_entities_batch(entities_batch)
+        kg.add_relationships_batch(relationships_batch)
+
+        total_entities += len(entities_batch)
+        total_relationships += len(relationships_batch)
         processed_chunks += 1
 
     return {

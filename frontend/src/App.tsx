@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import api, { getUser, logout } from "./services/api";
 import Sidebar from "./components/Sidebar";
@@ -16,6 +16,7 @@ function AppContent() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [username, setUsername] = useState<string | null>(getUser());
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,10 +72,16 @@ function AppContent() {
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await api.post("/chat", {
         question,
         session_id: currentSessionId,
+      }, {
+        signal: controller.signal,
       });
 
       const assistantMsg: Message = { 
@@ -98,13 +105,27 @@ function AppContent() {
         });
       }
     } catch (error: any) {
-      console.error(error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error contacting backend" },
-      ]);
+      if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "⏹ Request cancelled by user." },
+        ]);
+      } else {
+        console.error(error);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Error contacting backend" },
+        ]);
+      }
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
+    }
+  };
+
+  const cancelQuery = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -188,7 +209,7 @@ function AppContent() {
               )}
 
               <div className="shrink-0 max-w-4xl mx-auto w-full pt-4">
-                <ChatInput onSendMessage={sendMessage} loading={loading} />
+                <ChatInput onSendMessage={sendMessage} loading={loading} onCancel={cancelQuery} />
                 <div className="text-center mt-2 text-[10px] text-slate-500">
                   AI can make mistakes. Consider verifying critical information.
                 </div>
